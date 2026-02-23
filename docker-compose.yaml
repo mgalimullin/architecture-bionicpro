@@ -1,3 +1,4 @@
+# docker-compose.yaml
 services:
   keycloak_db:
     image: postgres:14
@@ -9,6 +10,23 @@ services:
       - ./postgres-keycloak-data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
+
+  ldap:
+    image: osixia/openldap:1.5.0
+    container_name: ldap
+    environment:
+      LDAP_ORGANISATION: "BionicPRO"
+      LDAP_DOMAIN: "example.com"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_LOG_LEVEL: "256"
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
+      # Добавьте эти переменные
+      LDAP_ADDITIONAL_SCHEMAS: "cosine"
+    volumes:
+      - ./ldap:/container/service/slapd/assets/config/bootstrap/ldif/custom
+    ports:
+      - "389:389"
+
   keycloak:
     image: quay.io/keycloak/keycloak:21.1
     environment:
@@ -18,6 +36,8 @@ services:
       KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak_db
       KC_DB_USERNAME: keycloak_user
       KC_DB_PASSWORD: keycloak_password
+      KC_LOG_LEVEL: INFO,org.keycloak.storage.ldap:DEBUG,org.keycloak.storage.UserStorageManager:DEBUG
+
     command: 
       - start-dev
       - --import-realm
@@ -27,6 +47,8 @@ services:
       - "8080:8080"
     depends_on:
       - keycloak_db
+      - ldap
+
   frontend:
     build:
       context: ./frontend
