@@ -37,6 +37,9 @@ services:
       KC_DB_USERNAME: keycloak_user
       KC_DB_PASSWORD: keycloak_password
       KC_LOG_LEVEL: INFO,org.keycloak.storage.ldap:DEBUG,org.keycloak.storage.UserStorageManager:DEBUG
+      # Яндекс OAuth credentials
+      YANDEX_CLIENT_ID: 2d0754c8157e4e0fb3ea14a36d892875
+      YANDEX_CLIENT_SECRET: d917839839ed4df494c7388a1b661cd3
 
     command: 
       - start-dev
