@@ -3,8 +3,16 @@ const axios = require("axios");
 const cookieParser = require("cookie-parser");
 const crypto = require("crypto");
 const { v4: uuid } = require("uuid");
+const cors = require("cors"); // 👈 ДОБАВЬТЕ ЭТУ СТРОКУ
 
 const app = express();
+
+app.use(cors({
+  origin: 'http://localhost:3000', // разрешаем только фронтенд
+  credentials: true, // обязательно для cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(cookieParser());
 app.use(express.json());
 

@@ -6,6 +6,7 @@ const ReportPage: React.FC = () => {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [report, setReport] = useState<any>(null); // ✅ добавлено
 
   const downloadReport = async () => {
     try {
@@ -14,11 +15,12 @@ const ReportPage: React.FC = () => {
 
       console.log("📤 Requesting report...");
 
+      // ✅ Запрос теперь идёт в auth-сервис, а не напрямую в backend
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/reports`,
+        `http://localhost:4000/reports`,
         {
           method: "GET",
-          credentials: "include" // IMPORTANT: send session cookie
+          credentials: "include" // обязательно для передачи sessionId cookie
         }
       );
 
@@ -40,6 +42,8 @@ const ReportPage: React.FC = () => {
       const data = await response.json();
 
       console.log("✅ Report data:", data);
+
+      setReport(data); // ✅ сохраняем отчёт
 
     } catch (err) {
       console.error("❌ Report error:", err);
@@ -76,6 +80,15 @@ const ReportPage: React.FC = () => {
         >
           Login
         </button>
+
+        {/* ✅ вывод отчёта */}
+        {report && (
+          <div className="mt-4 p-4 bg-gray-100 rounded">
+            <p><strong>Orders:</strong> {report.orders_count}</p>
+            <p><strong>Total:</strong> {report.total_sum}</p>
+            <p><strong>Discount:</strong> {report.total_discount}</p>
+          </div>
+        )}
 
         {error && (
           <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">

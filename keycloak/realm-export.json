@@ -118,7 +118,10 @@
             "temporary": false
           }
         ],
-        "realmRoles": ["user"]
+        "realmRoles": ["user"],
+        "attributes": {
+          "buyer_id": ["648821"]
+        }
       },
       {
         "username": "user2",
@@ -133,7 +136,10 @@
             "temporary": false
           }
         ],
-        "realmRoles": ["user"]
+        "realmRoles": ["user"],
+        "attributes": {
+          "buyer_id": ["6488214"]
+        }
       },
       {
         "username": "admin1",
@@ -163,7 +169,10 @@
             "temporary": false
           }
         ],
-        "realmRoles": ["prothetic_user"]
+        "realmRoles": ["prothetic_user"],
+        "attributes": {
+          "buyer_id": ["6488219"]
+        }
       },
       {
         "username": "prothetic2",
@@ -178,7 +187,10 @@
             "temporary": false
           }
         ],
-        "realmRoles": ["prothetic_user"]
+        "realmRoles": ["prothetic_user"],
+        "attributes": {
+          "buyer_id": ["6488211"]
+        }
       },
       {
         "username": "prothetic3",
@@ -193,7 +205,10 @@
             "temporary": false
           }
         ],
-        "realmRoles": ["prothetic_user"]
+        "realmRoles": ["prothetic_user"],
+        "attributes": {
+          "buyer_id": ["648801"]
+        }
       }
     ],
     "clients": [
@@ -208,7 +223,21 @@
         "directAccessGrantsEnabled": true,
         "attributes": {
           "pkce.code.challenge.method": "S256"
-        }
+        },
+        "protocolMappers": [
+          {
+            "name": "buyer_id",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-attribute-mapper",
+            "config": {
+              "user.attribute": "buyer_id",
+              "claim.name": "buyer_id",
+              "jsonType.label": "String",
+              "id.token.claim": "true",
+              "access.token.claim": "true"
+            }
+          }
+        ]
       },
       {
         "clientId": "reports-api",
