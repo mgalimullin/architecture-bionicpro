@@ -15,23 +15,18 @@ const ReportPage: React.FC = () => {
 
       console.log("📤 Requesting report...");
 
-      // ✅ Запрос теперь идёт в auth-сервис, а не напрямую в backend
       const response = await fetch(
         `http://localhost:4000/reports`,
         {
           method: "GET",
-          credentials: "include" // обязательно для передачи sessionId cookie
+          credentials: "include"
         }
       );
 
       console.log("📥 Response status:", response.status);
 
       if (response.status === 401) {
-        console.log("🔐 Not authenticated, redirecting to login");
-
-        window.location.href =
-          `http://localhost:4000/login`;
-
+        window.location.href = `http://localhost:4000/login`;
         return;
       }
 
@@ -39,11 +34,24 @@ const ReportPage: React.FC = () => {
         throw new Error(`HTTP error ${response.status}`);
       }
 
+      /* 1️⃣ получаем ссылку на CDN */
       const data = await response.json();
 
-      console.log("✅ Report data:", data);
+      console.log("CDN URL:", data.url);
 
-      setReport(data); // ✅ сохраняем отчёт
+      /* 2️⃣ скачиваем отчёт */
+      const reportResponse = await fetch(data.url);
+
+      if (!reportResponse.ok) {
+        throw new Error("Failed to load report from CDN");
+      }
+
+      const reportData = await reportResponse.json();
+
+      console.log("✅ Report data:", reportData);
+
+      /* 3️⃣ сохраняем отчёт */
+      setReport(reportData);
 
     } catch (err) {
       console.error("❌ Report error:", err);

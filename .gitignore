@@ -3,4 +3,6 @@
 .history/
 **/__pycache__/
 /tmp
+/minio-data
 /minio/data
+/nginx/cache

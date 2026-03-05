@@ -27,7 +27,43 @@ x-airflow-common: &airflow-common
     postgres:
       condition: service_healthy
 
-services:
+services:  
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9021"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    volumes:
+      - ./minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9021:9001"
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 minio minio123;
+      mc mb -p local/reports;
+      mc anonymous set public local/reports;
+      exit 0;
+      "
+
+  nginx-cdn:
+    image: nginx:1.25
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/cache:/var/cache/nginx
+    ports:
+      - "8081:80"
+    depends_on:
+      - minio
+      - minio-init
+
   keycloak_db:
     image: postgres:14
     environment:
@@ -69,20 +105,9 @@ services:
       YANDEX_CLIENT_ID: 2d0754c8157e4e0fb3ea14a36d892875
       YANDEX_CLIENT_SECRET: d917839839ed4df494c7388a1b661cd3
       
-      # 👇 ПОЛНОСТЬЮ ОТКЛЮЧАЕМ HTTPS ДЛЯ РАЗРАБОТКИ
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: 8080
-      KC_HOSTNAME_STRICT: "false"
-      KC_HOSTNAME_STRICT_HTTPS: "false"
-      KC_HTTP_ENABLED: "true"
-      KC_HTTP_PORT: 8080
-      KC_PROXY: "edge"
-      
     command: 
       - start-dev
       - --import-realm
-      - --http-enabled=true
-      - --http-port=8080
     
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
@@ -144,6 +169,12 @@ services:
       KEYCLOAK_REALM: reports-realm
       KEYCLOAK_CLIENT_ID: reports-api
       KEYCLOAK_CLIENT_SECRET: oNwoLQdvJAvRcL89SydqCWCe5ry1jMgq
+      S3_ENDPOINT: minio
+      S3_PORT: 9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio123
+      S3_BUCKET: reports
+      CDN_URL: http://localhost:8081
     depends_on:
       - postgres
       - keycloak

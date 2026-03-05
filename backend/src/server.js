@@ -2,6 +2,7 @@ const express = require("express");
 const { Pool } = require("pg");
 const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
+const Minio = require("minio");
 
 const app = express();
 
@@ -13,8 +14,37 @@ const {
   DB_USER,
   DB_PASSWORD,
   KEYCLOAK_URL,
-  KEYCLOAK_REALM
+  KEYCLOAK_REALM,
+  S3_ENDPOINT,
+  S3_PORT,
+  S3_ACCESS_KEY,
+  S3_SECRET_KEY,
+  S3_BUCKET,
+  CDN_URL
 } = process.env;
+
+/* =========================
+   S3
+========================= */
+const s3Client = new Minio.Client({
+  endPoint: S3_ENDPOINT,
+  port: Number(S3_PORT),
+  useSSL: false,
+  accessKey: S3_ACCESS_KEY,
+  secretKey: S3_SECRET_KEY
+});
+
+async function ensureBucket() {
+
+  const exists = await s3Client.bucketExists(S3_BUCKET);
+
+  if (!exists) {
+    await s3Client.makeBucket(S3_BUCKET);
+  }
+
+}
+
+ensureBucket();
 
 /* =========================
    Postgres pool
@@ -95,18 +125,34 @@ function authMiddleware(req, res, next) {
 
 app.get("/reports", authMiddleware, async (req, res) => {
 
+  console.log("📤 req.user:", req.user);
+  const userId = Number(req.user.buyer_id);
+
+  if (isNaN(userId)) {
+    return res.status(400).send("Invalid buyer_id");
+  }
+
+  const objectName = `${userId}.json`;
+
   try {
 
-    console.log("📤 req.user:", req.user);
+    /* 1️⃣ Проверяем наличие отчёта в S3 */
 
-    // 🔐 Доступ только к своему отчёту
-    const userId = Number(req.user.buyer_id);
+    try {
 
-    if (isNaN(userId)) {
-      return res.status(400).send("Invalid buyer_id");
+      await s3Client.statObject(S3_BUCKET, objectName);
+
+      return res.json({
+        source: "cache",
+        url: `${CDN_URL}/reports/${objectName}`
+      });
+
+    } catch(e) {
+       console.log("📤 cache: object not found ${CDN_URL}/reports/${objectName}");
     }
 
-    /* OLAP-style query — без realtime вычислений */
+    /* 2️⃣ Генерируем отчёт */
+
     const result = await pool.query(`
       SELECT 
         buyer_id,
@@ -118,19 +164,40 @@ app.get("/reports", authMiddleware, async (req, res) => {
       GROUP BY buyer_id
     `, [userId]);
 
-    return res.json(result.rows[0] || {
+    const report = result.rows[0] || {
       buyer_id: userId,
       orders_count: 0,
       total_sum: 0,
       total_discount: 0
+    };
+
+    const buffer = Buffer.from(JSON.stringify(report));
+
+    /* 3️⃣ сохраняем в S3 */
+
+    await s3Client.putObject(
+      S3_BUCKET,
+      objectName,
+      buffer,
+      buffer.length,
+      { "Content-Type": "application/json" }
+    );
+
+    /* 4️⃣ возвращаем CDN ссылку */
+
+    res.json({
+      source: "generated",
+      url: `${CDN_URL}/reports/${objectName}`
     });
 
   } catch (e) {
 
     console.error("❌ DB error:", e);
 
-    res.status(500).send("DB error");
+    res.status(500).send("report error");
+
   }
+
 });
 
 app.listen(PORT, () => {
