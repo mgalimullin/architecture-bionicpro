@@ -6,7 +6,7 @@ const ReportPage: React.FC = () => {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [report, setReport] = useState<any>(null); // ✅ добавлено
+  const [report, setReport] = useState<any>(null);
 
   const downloadReport = async () => {
     try {

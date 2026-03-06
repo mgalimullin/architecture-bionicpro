@@ -3,6 +3,7 @@ const { Pool } = require("pg");
 const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
 const Minio = require("minio");
+const { createClient } = require('@clickhouse/client')
 
 const app = express();
 
@@ -22,6 +23,13 @@ const {
   S3_BUCKET,
   CDN_URL
 } = process.env;
+
+/* =========================
+   clickhouse
+========================= */
+const clickhouse = createClient({
+  host: 'http://clickhouse:8123'
+})
 
 /* =========================
    S3
@@ -137,7 +145,6 @@ app.get("/reports", authMiddleware, async (req, res) => {
   try {
 
     /* 1️⃣ Проверяем наличие отчёта в S3 */
-
     try {
 
       await s3Client.statObject(S3_BUCKET, objectName);
@@ -153,18 +160,25 @@ app.get("/reports", authMiddleware, async (req, res) => {
 
     /* 2️⃣ Генерируем отчёт */
 
-    const result = await pool.query(`
-      SELECT 
-        buyer_id,
-        COUNT(*) as orders_count,
-        SUM(total) as total_sum,
-        SUM(discount) as total_discount
-      FROM sample_table
-      WHERE buyer_id = $1
-      GROUP BY buyer_id
-    `, [userId]);
+    const result = await clickhouse.query({
+      query: `
+        SELECT
+          buyer_id,
+          orders_count,
+          total_sum,
+          total_discount
+        FROM orders_analytics
+        WHERE buyer_id = {buyer_id:UInt64}
+      `,
+      query_params: {
+        buyer_id: userId
+      },
+      format: 'JSONEachRow'
+    })
 
-    const report = result.rows[0] || {
+    const rows = await result.json()
+
+    const report = rows[0] || {
       buyer_id: userId,
       orders_count: 0,
       total_sum: 0,
@@ -172,7 +186,7 @@ app.get("/reports", authMiddleware, async (req, res) => {
     };
 
     const buffer = Buffer.from(JSON.stringify(report));
-
+    console.log("📤 got from clickhouse", JSON.stringify(report))
     /* 3️⃣ сохраняем в S3 */
 
     await s3Client.putObject(
