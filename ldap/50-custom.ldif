@@ -13,6 +13,8 @@ ou: Groups
 dn: uid=john.doe,ou=People,dc=example,dc=com
 objectClass: top
 objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
 cn: John
 sn: Doe
 uid: john.doe
@@ -22,14 +24,18 @@ userPassword: password
 dn: uid=jane.smith,ou=People,dc=example,dc=com
 objectClass: top
 objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
 cn: Jane
 sn: Smith
 uid: jane.smith
 mail: jane@example.com
 userPassword: password
 
-dn: uid=alex,ou=People,dc=example,dc=com
+dn: uid=alex.johnson,ou=People,dc=example,dc=com
 objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
 cn: Alex
 sn: Johnson
 uid: alex.johnson

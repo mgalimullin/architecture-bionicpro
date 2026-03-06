@@ -1,2 +1,8 @@
 /postgres-keycloak-data
 2024__yandex-architecture-sso.code-workspace
+.history/
+**/__pycache__/
+/tmp
+/minio-data
+/minio/data
+/nginx/cache
